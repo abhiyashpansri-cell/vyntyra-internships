@@ -22,6 +22,7 @@ const defaultAllowedOrigins = [
   "http://127.0.0.1:5173",
   "https://internships.vyntyraconsultancyservices.in",
   "https://vyntyraconsultancyservices.in",
+  "https://vyntyra-internships-production.up.railway.app",
 ];
 
 const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || defaultAllowedOrigins.join(","))
@@ -105,10 +106,18 @@ app.use("/uploads", express.static(path.resolve(process.cwd(), uploadsDir)));
 
 app.use("/api/applications", applicationsRouter);
 app.use("/api/payments", paymentsRouter);
-
-app.get("/health", (_, res) => res.json({ status: "ok" }));
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
+});
+app.get("/health", (_, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+  });
+});
+
+app.get("/ready", (_, res) => {
+  res.json({ status: "ready" });
 });
 app.use((err, req, res, next) => {
   console.error(err);
@@ -123,7 +132,6 @@ app.use((err, req, res, next) => {
 
 const PORT = Number(process.env.PORT ?? 4000);
 
-// Start server first (non-blocking approach for Render)
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Listening on port ${PORT}`);
 });
@@ -134,4 +142,9 @@ connectDB(process.env.MONGODB_URI).catch((error) => {
 });
 
 // Start background services without blocking - fallbacks are handled
-startBackgroundServices();
+
+try {
+  startBackgroundServices();
+} catch (err) {
+  console.log("Background services failed, continuing...");
+}
