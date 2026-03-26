@@ -124,7 +124,7 @@ app.use((err, req, res, next) => {
 const PORT = Number(process.env.PORT ?? 4000);
 
 // Start server first (non-blocking approach for Render)
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Listening on port ${PORT}`);
 });
 
