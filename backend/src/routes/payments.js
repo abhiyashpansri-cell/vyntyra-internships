@@ -12,7 +12,7 @@ const FRONTEND_BASE_URL = (process.env.FRONTEND_BASE_URL || "https://internships
   .replace(/\/+$/, "");
 const PAYMENT_SUCCESS_URL = process.env.PAYMENT_SUCCESS_URL || `${FRONTEND_BASE_URL}/?payment=success`;
 const PAYMENT_FAILURE_URL = process.env.PAYMENT_FAILURE_URL || `${FRONTEND_BASE_URL}/?payment=failure`;
-const BACKEND_BASE_URL = (process.env.BACKEND_BASE_URL || "https://vyntyrainternships-backend.onrender.com")
+const BACKEND_BASE_URL = (process.env.BACKEND_BASE_URL || "https://vyntyra-internships-production.up.railway.app")
   .replace(/\/+$/, "");
 const enablePaymentTimingLogs = String(process.env.ENABLE_REQUEST_TIMING_LOGS ?? "false").toLowerCase() === "true";
 
