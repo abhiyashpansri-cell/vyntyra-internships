@@ -130,10 +130,10 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message });
 });
 
-const PORT = Number(process.env.PORT ?? 4000);
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Listening on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Initialize database and background services in parallel (non-blocking)
