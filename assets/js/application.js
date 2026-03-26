@@ -16,8 +16,7 @@ const API_BASE_CANDIDATES = isProduction
 const UNIQUE_API_BASE_CANDIDATES = [...new Set(API_BASE_CANDIDATES)];
 let activeApiBase = UNIQUE_API_BASE_CANDIDATES.find(Boolean) || "";
 */
-
-const API_BASE = "https://vyntyrainternships-backend.onrender.com/api";
+const API_BASE = "https://vyntyra-internships-production.up.railway.app/api";
 // Live Razorpay public key
 const RAZORPAY_KEY = "rzp_live_SUgru3eERmlvUC";
 const PAYMENT_PENDING_APP_KEY = "vyntyra_pending_application_id";
