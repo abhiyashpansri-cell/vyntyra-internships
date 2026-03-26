@@ -119,94 +119,90 @@ const runPostPaymentWorkflow = async ({ paymentId, applicationId }) => {
  * Body: { applicationId, amount }
  */
 router.post("/create-order", async (req, res, next) => {
-  const routeStartNs = nowNs();
+  console.log("🔥 STEP 1: Request received");
+
   try {
     const razorpay = getRazorpayClient();
     const { applicationId, amount } = req.body;
+
+    console.log("📦 Incoming Data:", { applicationId, amount });
+
     const feeAmount = Number(amount ?? process.env.APPLICATION_FEE_INR ?? 499);
 
     if (!applicationId || !Number.isFinite(feeAmount) || feeAmount <= 0) {
+      console.log("❌ Invalid input");
       return res.status(400).json({ message: "Missing applicationId or valid amount" });
     }
+
+    console.log("⏳ STEP 2: Fetching application from DB...");
 
     const application = await Application.findById(applicationId)
       .select("_id status email fullName")
       .lean();
-    const lookupDoneNs = nowNs();
+
+    console.log("✅ STEP 2 DONE: DB Response received");
+
     if (!application) {
+      console.log("❌ Application not found");
       return res.status(404).json({ message: "Application not found" });
     }
 
     if (application.status !== "PENDING_PAYMENT") {
+      console.log("❌ Already processed");
       return res.status(400).json({ message: "Application already processed" });
     }
 
-    let order;
-    try {
-      order = await razorpay.orders.create({
-        amount: Math.round(feeAmount * 100), // Razorpay expects paise
-        currency: "INR",
-        receipt: `app_${applicationId}`,
-        notes: {
-          applicationId: applicationId.toString(),
-          email: application.email,
-          fullName: application.fullName,
+    console.log("⏳ STEP 3: Creating Razorpay order...");
+
+    const order = await razorpay.orders.create({
+      amount: Math.round(feeAmount * 100),
+      currency: "INR",
+      receipt: `app_${applicationId}`,
+      notes: {
+        applicationId: applicationId.toString(),
+        email: application.email,
+        fullName: application.fullName,
+      },
+    });
+
+    console.log("✅ STEP 3 DONE: Razorpay order created", order.id);
+
+    console.log("⏳ STEP 4: Saving payment to DB...");
+
+    const payment = await Payment.findOneAndUpdate(
+      { applicationId },
+      {
+        $set: {
+          gateway: "razorpay",
+          razorpayOrderId: order.id,
+          amount: feeAmount,
+          currency: "INR",
+          status: "pending",
+          updatedAt: new Date(),
         },
-      });
-      const orderDoneNs = nowNs();
-
-      // Create or update payment record
-      const payment = await Payment.findOneAndUpdate(
-        { applicationId },
-        {
-          $set: {
-            gateway: "razorpay",
-            razorpayOrderId: order.id,
-            amount: feeAmount,
-            currency: "INR",
-            status: "pending",
-            updatedAt: new Date(),
-          },
-          $setOnInsert: {
-            applicationId,
-            createdAt: new Date(),
-          },
+        $setOnInsert: {
+          applicationId,
+          createdAt: new Date(),
         },
-        {
-          new: true,
-          upsert: true,
-          runValidators: true,
-        }
-      );
-      const dbUpsertDoneNs = nowNs();
-
-      logPaymentTiming("create-order", {
-        applicationId,
-        appLookupMs: elapsedMs(routeStartNs).toFixed(2),
-        razorpayOrderMs: (Number(orderDoneNs - lookupDoneNs) / 1e6).toFixed(2),
-        dbUpsertMs: (Number(dbUpsertDoneNs - orderDoneNs) / 1e6).toFixed(2),
-        totalMs: elapsedMs(routeStartNs).toFixed(2),
-      });
-
-      return res.status(201).json({
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        paymentId: payment._id,
-        successUrl: PAYMENT_SUCCESS_URL,
-        failureUrl: PAYMENT_FAILURE_URL,
-      });
-    } catch (rzpError) {
-      const description = rzpError?.error?.description || rzpError?.message;
-      if (rzpError?.statusCode === 401 || /auth/i.test(String(description || ""))) {
-        const error = new Error("Razorpay authentication failed. Please verify KEY_ID and KEY_SECRET.");
-        error.statusCode = 502;
-        throw error;
+      },
+      {
+        new: true,
+        upsert: true,
+        runValidators: true,
       }
-      throw rzpError;
-    }
+    );
+
+    console.log("✅ STEP 4 DONE: Payment saved");
+
+    return res.status(201).json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      paymentId: payment._id,
+    });
 
   } catch (error) {
+    console.log("💥 ERROR OCCURRED:", error.message);
     next(error);
   }
 });
